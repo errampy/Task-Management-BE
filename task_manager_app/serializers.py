@@ -16,6 +16,15 @@ class TaskStatusSerializer(serializers.ModelSerializer):
 
 
 class TaskSerializer(serializers.ModelSerializer):
+    status = serializers.CharField(source='status.status')
+    created_at = serializers.DateTimeField(format="%d %B %Y, %I:%M %p")
+
+    class Meta:
+        model = Task
+        fields = "__all__"
+
+
+class TaskCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = "__all__"

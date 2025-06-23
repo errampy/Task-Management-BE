@@ -1,7 +1,7 @@
 from pyexpat.errors import messages
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from task_manager_app.serializers import UserRegistrationSerializer, TaskStatusSerializer, TaskSerializer
+from task_manager_app.serializers import UserRegistrationSerializer, TaskStatusSerializer, TaskSerializer, TaskCreateUpdateSerializer
 from rest_framework import permissions
 from rest_framework import status
 from django.contrib.auth.hashers import make_password
@@ -70,11 +70,20 @@ class TaskAPIView(APIView):
     def get(self, request, *args, **kwargs):
         try:
             status_id = request.GET.get('status', None)
+            task_id = request.GET.get('task_id', None)
+            if task_id is not None:
+                try:
+                    obj = Task.objects.get(pk=task_id)
+                    serializer = TaskCreateUpdateSerializer(obj)
+                    return Response(data=serializer.data, status=status.HTTP_200_OK)
+                except Task.DoesNotExist:
+                    return Response(data=None, status=status.HTTP_400_BAD_REQUEST)
             if status_id:
                 records = Task.objects.filter(
                     Q(user=request.user) & Q(status_id=status_id))
             else:
                 records = Task.objects.filter(user=request.user)
+
             serializer = TaskSerializer(records, many=True)
             return Response(data=serializer.data, status=status.HTTP_200_OK)
         except Exception as error:
@@ -83,7 +92,7 @@ class TaskAPIView(APIView):
     @swagger_auto_schema(request_body=TaskSerializer)
     def post(self, request, *args, **kwargs):
         try:
-            serializer = TaskSerializer(data=request.data)
+            serializer = TaskCreateUpdateSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save(user=request.user)
                 return Response(data="Successfully", status=status.HTTP_201_CREATED)
@@ -97,7 +106,7 @@ class TaskAPIView(APIView):
         try:
             task_id = kwargs.get('pk')
             task = get_object_or_404(Task, id=task_id, user=request.user)
-            serializer = TaskSerializer(task, data=request.data, partial=True)
+            serializer = TaskCreateUpdateSerializer(task, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 return Response(data="Updated Successfully", status=status.HTTP_200_OK)
